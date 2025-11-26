@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ShopContext } from "./ShopContext";
-import { products } from "../assets/assets";
+import axios from 'axios'
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 
@@ -11,54 +11,43 @@ const ShopContextProvider = (props) => {
   const [search,setSearch] = useState ('');
   const [showSearch,setShowSearch] = useState (false);
   const [cartsItems, setCartItems] = useState({});
+  const [products, setProducts] = useState([]);
   const navigate = useNavigate();
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   
-  const addToCart = async (itemId,size) => {
+  const addToCart = async (itemId) => {
 
-    if (!size) {
-      toast.error('Pls Select Product Size!');
-      return;
+    let cartData = structuredClone(cartsItems);
+
+    if (cartData[itemId]) {
+      cartData[itemId] += 1;
+    } else {
+      cartData[itemId] = 1;
     }
-
-      let cartData = structuredClone(cartsItems);
-
-      if (cartData[itemId]) {
-        if (cartData[itemId][size]) {
-          cartData[itemId][size] += 1;
-        }
-        else{
-          cartData[itemId][size] = 1;
-        }
-      }
-      else{
-        cartData[itemId] = {};
-        cartData[itemId][size] = 1;
-      }
-      setCartItems(cartData);
+    setCartItems(cartData);
+    toast.success('Item added to cart!');
 
   }
 
   const getCartCount = () => {
     let totalCount = 0;
     for(const items in cartsItems){
-      for(const item in cartsItems[items]){
-        try {
-          if (cartsItems[items][item] > 0) {
-            totalCount += cartsItems[items][item];
-          }
-        } catch (error) {
-          
+      try {
+        if (cartsItems[items] > 0) {
+          totalCount += cartsItems[items];
         }
+      } catch (error) {
+        
       }
     }
     return totalCount;
   }
 
-  const updateQuantity = async (itemId,size,quantity) => {
+  const updateQuantity = async (itemId,quantity) => {
 
     let cartData = structuredClone(cartsItems);
 
-    cartData[itemId][size] = quantity;
+    cartData[itemId] = quantity;
 
     setCartItems(cartData);
   }
@@ -66,22 +55,36 @@ const ShopContextProvider = (props) => {
   const getCartAmount =  () => {
     let totalAmount = 0;
     for(const items in cartsItems){
-      let itemInfo = products.find((product)=> product._id === items);
-      for(const item in cartsItems[items]){
-        try {
-          if (cartsItems[items][item] > 0) {
-            totalAmount += itemInfo.price * cartsItems[items][item]
-          }
-        } catch (error) {
-          
+      let itemInfo = products.find((product)=> (product._id ? product._id === items : product.id === Number(items)) );
+      try {
+        if (cartsItems[items] > 0) {
+          totalAmount += itemInfo.price * cartsItems[items]
         }
+      } catch (error) {
+        
       }
     }
     return totalAmount;
   }
 
+  // Fetch products from backend
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get(`${apiUrl}/api/products`);
+      setProducts(res.data || []);
+    } catch (error) {
+      console.error('Error fetching products for context:', error);
+      toast.error('Failed to load products');
+    }
+  }
+
+  useEffect(() => {
+    fetchProducts();
+  }, [])
+
   const value = {
     products,
+    refreshProducts: fetchProducts,
     currency,
     delivery_fee,
     search,setSearch,showSearch,setShowSearch,

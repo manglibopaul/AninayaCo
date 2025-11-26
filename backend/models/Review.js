@@ -1,0 +1,42 @@
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/database.js';
+import User from './User.js';
+
+const Review = sequelize.define('Review', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  productId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: User,
+      key: 'id',
+    },
+  },
+  userName: DataTypes.STRING,
+  rating: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: { min: 1, max: 5 },
+  },
+  title: DataTypes.STRING,
+  comment: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+  },
+  helpful: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+}, {
+  timestamps: true,
+});
+
+export default Review;

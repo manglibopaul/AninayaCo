@@ -113,43 +113,13 @@ const Collection = () => {
           <div className='flex flex-col gap-2 text-sm font-light text-gray-700'>
 
             <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Scarves'} onChange={toggleSubCategory} /> Scarves
-            </p>
-            <p className='flex gap-2'>
               <input className='w-3' type="checkbox" value={'Keychains'} onChange={toggleSubCategory} /> Keychains
-            </p>
-            <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Pillows'} onChange={toggleSubCategory} /> Pillows
-            </p>
-            <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Decorations'} onChange={toggleSubCategory} /> Decorations
             </p>
             <p className='flex gap-2'>
               <input className='w-3' type="checkbox" value={'Bouquets'} onChange={toggleSubCategory} /> Bouquets
             </p>
             <p className='flex gap-2'>
               <input className='w-3' type="checkbox" value={'Coasters'} onChange={toggleSubCategory} /> Coasters
-            </p>
-            <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Hangings'} onChange={toggleSubCategory} /> Hangings
-            </p>
-            <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Collectibles'} onChange={toggleSubCategory} /> Collectibles
-            </p>
-            <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Bonnets'} onChange={toggleSubCategory} /> Bonnets
-            </p>
-            <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Bags'} onChange={toggleSubCategory} /> Bags
-            </p>
-            <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Charms'} onChange={toggleSubCategory} /> Charms
-            </p>
-            <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Pins'} onChange={toggleSubCategory} /> Pins
-            </p>
-            <p className='flex gap-2'>
-              <input className='w-3' type="checkbox" value={'Rugs'} onChange={toggleSubCategory} /> Rugs
             </p>
           </div>
         </div>
@@ -176,7 +146,7 @@ const Collection = () => {
         <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 gap-y-6'>
           {
             filterProducts.map((item,index)=>(
-              <ProductItem key={index} name={item.name} id={item._id} price={item.price} image={item.image} />
+              <ProductItem key={index} name={item.name} id={item._id || item.id} price={item.price} image={item.image} />
             ))
           }
         </div>

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { ShopContext } from '../context/ShopContext';
 import { assets } from '../assets/assets';
@@ -8,16 +8,33 @@ const Product = () => {
 
   const {productId} = useParams();
   const {products, currency, addToCart} = useContext(ShopContext);
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const [productData,setProductData] = useState(false);
   const [image,setImage] = useState('')
-  const [size,setSize] = useState('');
   const [showAR, setShowAR] = useState(false);
+  const modelViewerRef = useRef(null);
+
+  const getImageUrl = (img) => {
+    if (!img) return '/path/to/placeholder.jpg';
+    
+    if (typeof img === 'object' && img.url) {
+      return img.url.startsWith('http') ? img.url : `${apiUrl}${img.url}`;
+    } else if (typeof img === 'string') {
+      return img.startsWith('http') ? img : `${apiUrl}${img}`;
+    }
+    return '/path/to/placeholder.jpg';
+  }
 
   const fetchProductData = async () => {
     products.map((item)=>{
-      if (item._id === productId) {
-        setProductData(item)
-        setImage(item.image[0])
+      const id = item._id || item.id;
+      if (String(id) === String(productId)) {
+        setProductData(item);
+        // Handle both array of strings and array of objects for images
+        if (Array.isArray(item.image) && item.image.length > 0) {
+          const imageUrl = getImageUrl(item.image[0]);
+          setImage(imageUrl);
+        }
         return null;
       }
     })
@@ -27,6 +44,34 @@ const Product = () => {
     fetchProductData();
   },[productId])
 
+  // Set model-viewer src when AR modal opens
+  useEffect(() => {
+    if (showAR && modelViewerRef.current && productData.modelUrl) {
+      // Clear previous content
+      modelViewerRef.current.innerHTML = '';
+      
+      // Create model-viewer element
+      const viewer = document.createElement('model-viewer');
+      const modelUrl = productData.modelUrl.startsWith('http') 
+        ? productData.modelUrl 
+        : `${apiUrl}${productData.modelUrl}`;
+      viewer.setAttribute('src', modelUrl);
+      viewer.setAttribute('ar', '');
+      viewer.setAttribute('ar-modes', 'scene-viewer quick-look webxr');
+      viewer.setAttribute('camera-controls', '');
+      viewer.setAttribute('auto-rotate', '');
+      viewer.setAttribute('interaction-prompt', 'auto');
+      viewer.style.width = '100%';
+      viewer.style.height = '500px';
+      
+      if (productData.iosModel) {
+        viewer.setAttribute('ios-src', productData.iosModel);
+      }
+      
+      modelViewerRef.current.appendChild(viewer);
+    }
+  }, [showAR, productData.modelUrl, productData.iosModel])
+
   return productData ? (
     <div className='border-t-2 pt-10 transition-opacity ease-in duration-500 opacity-100'>
 
@@ -35,9 +80,12 @@ const Product = () => {
         {/* -------------------------product images----------------- */}
         <div className='flex-1 flex flex-col-reverse gap-3 sm:flex-row'>
           <div className='flex sm:flex-col overflow-x-auto sm:overflow-y-scroll justify-between sm:justify-normal sm:w-[18.7%] w-full'>
-            {productData.image.map((item,index)=>(
-              <img onClick={()=>setImage(item)} src={item} key={index} className='w-{24%} sm:w-full sm:mb-3 flex-shrink-0 cursor-pointer' alt="" />
-            ))}
+            {productData.image && productData.image.map((item,index)=>{
+              const imgUrl = getImageUrl(item);
+              return (
+                <img onClick={()=>setImage(imgUrl)} src={imgUrl} key={index} className='w-{24%} sm:w-full sm:mb-3 flex-shrink-0 cursor-pointer' alt="" />
+              )
+            })}
           </div>
           <div className='w-full sm:w-[80%]'>
               <img className='w-full h-auto' src={image} alt="" />
@@ -48,29 +96,11 @@ const Product = () => {
         <div className='flex-1'>
           <h1 className='font-medium text-2xl mt-2'>{productData.name}</h1>
 
-          <div className='flex item-center gap-1 mt-2'>
-              <img src={assets.star_icon} alt="" className="w-3 5" />
-              <img src={assets.star_icon} alt="" className="w-3 5" />
-              <img src={assets.star_icon} alt="" className="w-3 5" />
-              <img src={assets.star_icon} alt="" className="w-3 5" />
-              <img src={assets.star_dull_icon} alt="" className="w-3 5" />
-              <p className='pl-2'>(122)</p>
-          </div>
-
           <p className='mt-5 text-3xl font-medium'>{currency}{productData.price}</p>
           <p className='mt-5 text-gray-500 md:w-4/5'>{productData.description}</p>
 
-          <div className='flex flex-col gap-4 my-8'>
-            <p>Select Size</p>
-            <div className='flex gap-2'>
-              {productData.sizes.map((item,index)=>(
-                <button onClick={()=>setSize(item)} className={`border py-2 px-4 bg-gray-100 ${item === size ? 'border-pink-400' : ''}`} key={index}>{item}</button>
-              ))}
-            </div>
-          </div>
-
           {/* ------- ADD TO CART + AR BUTTON ------- */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 my-8">
 
             {/* ⭐ View AR button (left side) */}
             {productData.modelUrl && (
@@ -82,7 +112,7 @@ const Product = () => {
             )}
 
             <button 
-              onClick={()=>addToCart(productData._id,size)} 
+              onClick={()=>addToCart(productData._id || productData.id)} 
               className='bg-black text-white px-8 py-3 text-sm active:bg-pink-700'>
               ADD TO CART
             </button>
@@ -104,10 +134,9 @@ const Product = () => {
       <div className='mt-20'>
           <div className='flex'>
               <b className='border px-5 py-3 text-sm'>Description</b>
-              <p className='border px-5 py-3 text-sm'>Reviews (122)</p>
           </div>
           <div className='flex flex-col gap-4 border px-6 py-6 text-sm text-gray-500'>
-            <p>Aninaya.co is an innovative online marketplace dedicated to elevating Baguio’s local crochet artistry through technology and culture...</p>
+            <p>Aninaya.co is an innovative online marketplace dedicated to elevating Baguio's local crochet artistry through technology and culture...</p>
             <p>With the integration of Augmented Reality (AR), buyers can preview crochet products in real environments...</p>
             <p>Every stitch tells a story of passion, tradition, and artistry—now brought to life in a more immersive way.</p>
           </div>
@@ -130,16 +159,8 @@ const Product = () => {
 
             <h2 className="text-lg font-medium mb-2">View in Augmented Reality</h2>
 
-            <model-viewer
-              src={productData.modelUrl}
-            
-              ar
-              ar-modes="scene-viewer quick-look webxr"
-              camera-controls
-              auto-rotate
-              style={{ width: "100%", height: "500px" }}
-            >
-            </model-viewer>
+            <div ref={modelViewerRef} style={{ width: "100%", height: "500px" }}>
+            </div>
 
             <p className='mt-2 text-sm text-gray-500'>
               Point your camera to place the model in your room.

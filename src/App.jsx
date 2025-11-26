@@ -10,6 +10,8 @@ import ArView from './pages/ArView'
 import Login from './pages/Login'
 import Orders from './pages/Orders'
 import PlaceOrder from './pages/PlaceOrder'
+import SellerLogin from './pages/SellerLogin'
+import SellerDashboard from './pages/SellerDashboard'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import SearchBar from './components/SearchBar'
@@ -34,6 +36,8 @@ const App = () => {
         <Route path='/login' element={<Login/>} />
         <Route path='/orders' element={<Orders/>} />
         <Route path='/place-order' element={<PlaceOrder/>} />
+        <Route path='/seller/login' element={<SellerLogin/>} />
+        <Route path='/seller/dashboard' element={<SellerDashboard/>} />
 
       </Routes>
       <Footer/>
