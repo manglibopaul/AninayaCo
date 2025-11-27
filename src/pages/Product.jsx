@@ -42,7 +42,7 @@ const Product = () => {
 
   useEffect(()=>{
     fetchProductData();
-  },[productId])
+  },[productId, products])
 
   // Set model-viewer src when AR modal opens
   useEffect(() => {
@@ -79,16 +79,23 @@ const Product = () => {
 
         {/* -------------------------product images----------------- */}
         <div className='flex-1 flex flex-col-reverse gap-3 sm:flex-row'>
-          <div className='flex sm:flex-col overflow-x-auto sm:overflow-y-scroll justify-between sm:justify-normal sm:w-[18.7%] w-full'>
+          <div className='flex sm:flex-col overflow-x-auto sm:overflow-y-scroll justify-between sm:justify-normal sm:w-[18.7%] w-full gap-2'>
             {productData.image && productData.image.map((item,index)=>{
               const imgUrl = getImageUrl(item);
+              const isActive = image === imgUrl;
               return (
-                <img onClick={()=>setImage(imgUrl)} src={imgUrl} key={index} className='w-{24%} sm:w-full sm:mb-3 flex-shrink-0 cursor-pointer' alt="" />
+                <img 
+                  onClick={()=>setImage(imgUrl)} 
+                  src={imgUrl} 
+                  key={index} 
+                  className={`w-{24%} sm:w-full sm:mb-3 flex-shrink-0 cursor-pointer rounded transition-all ${isActive ? 'border-2 border-black' : 'border border-gray-300'}`}
+                  alt={`Product view ${index + 1}`}
+                />
               )
             })}
           </div>
           <div className='w-full sm:w-[80%]'>
-              <img className='w-full h-auto' src={image} alt="" />
+              <img className='w-full h-auto rounded' src={image} alt="" />
           </div>
         </div>
 
@@ -124,7 +131,7 @@ const Product = () => {
           <div className='text-sm text-gray-500 mt-5 flex flex-col gap-1'>
               <p>View in Augmented Reality to preview the product size in your space</p>
               <p>100% Handmade crochet product</p>
-              <p>Cash in delivery is available on this product.</p>
+              <p>Cash on delivery is available on this product.</p>
               <p>Easy return and exchange policy within 6 days.</p>
           </div>
         </div>

@@ -1,17 +1,16 @@
-import React, { useEffect, useState } from 'react'
-import { useShop } from '../context/ShopContext'
+import React, { useEffect, useState, useContext } from 'react'
+import { ShopContext } from '../context/ShopContext'
 import Title from './Title';
 import ProductItem from './ProductItem';
 
 const LatestCollection = () => {
 
-    const { products } = useShop();
+    const { products } = useContext(ShopContext);
     const [latestProducts, setLatestProducts] = useState([]);
 
     useEffect(()=>{
         setLatestProducts(products.slice(0,10));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    },[])
+    },[products])
 
   return (
     <div id="latest-collection" className='my-10'>

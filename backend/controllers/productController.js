@@ -94,7 +94,7 @@ export const updateProduct = async (req, res) => {
 
     // Handle file uploads
     if (req.files && req.files.length > 0) {
-      // Handle multiple images
+      // Handle multiple images - only update if new images are provided
       const imageFiles = req.files.filter(f => f.fieldname === 'image');
       if (imageFiles.length > 0) {
         updateData.image = imageFiles.map(f => ({
@@ -102,11 +102,20 @@ export const updateProduct = async (req, res) => {
           filename: f.filename,
         }));
       }
+      // If no new images, keep existing images
+      else if (!updateData.image) {
+        updateData.image = product.image;
+      }
 
       // Handle model file
       const modelFile = req.files.find(f => f.fieldname === 'model');
       if (modelFile) {
         updateData.modelUrl = `/uploads/models/${modelFile.filename}`;
+      }
+    } else {
+      // If no files uploaded, keep existing images and model
+      if (!updateData.image) {
+        updateData.image = product.image;
       }
     }
 

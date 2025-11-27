@@ -6,6 +6,7 @@ import { ShopContext } from '../context/ShopContext';
 const Navbar = () => {
 
     const [visible,setVisible] = useState(false);
+    const sellerToken = localStorage.getItem('sellerToken');
 
     const {setShowSearch , getCartCount} = useContext(ShopContext); 
 
@@ -34,18 +35,20 @@ const Navbar = () => {
         </NavLink>
       </ul>
       <div className='flex items-center gap-6'>
-        <img onClick ={()=>setShowSearch(true)}src={assets.search_icon} className='w-5 cursor-pointer' alt="" />
+        <img onClick ={()=>setShowSearch(true)}src={assets.search_icon} className='w-5 cursor-pointer' alt="" loading="lazy" />
 
             <Link to='/cart' className='relative'>
-                <img src={assets.cart_icon} className='w-5 min-w-5' alt="" />
+                <img src={assets.cart_icon} className='w-5 min-w-5' alt="" loading="lazy" />
                 <p className='absolute right-[-5px] bottom-[-5px] w-4 text-center leading-4 bg-black text-white aspect-square rounded-full text-[8px]'>{getCartCount()}</p>
             </Link>
 
-            <Link to='/seller/login' className='text-sm text-gray-700 hover:text-black'>
-              Seller
-            </Link>
+            {sellerToken && (
+              <Link to='/seller/profile' className='text-sm text-gray-700 hover:text-black'>
+                Seller
+              </Link>
+            )}
 
-            <img onClick={()=>setVisible(true)} src={assets.menu_icon} className='w-5 cursor-pointer sm:hidden' alt="" />
+            <img onClick={()=>setVisible(true)} src={assets.menu_icon} className='w-5 cursor-pointer sm:hidden' alt="" loading="lazy" />
       </div>
 
         {/* sidebar menu for a much smaller devices */}

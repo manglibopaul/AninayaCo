@@ -30,10 +30,7 @@ Discover Aninaya.co.
 
       </div>
 
-        <div>
-            <hr />
-            <p className='py-5 text-sm text-center'>Augmented reallity e-commerce platform project</p>
-        </div>
+        {/* Footer note removed per request */}
 
     </div>
   )

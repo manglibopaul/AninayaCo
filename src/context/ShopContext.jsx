@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 
-const ShopContext = createContext();
+export const ShopContext = createContext();
 
 export const ShopProvider = ({ children }) => {
   const [products, setProducts] = useState([
@@ -31,6 +31,7 @@ export const ShopProvider = ({ children }) => {
   ]);
 
   const [cart, setCart] = useState([]);
+  const [showSearch, setShowSearch] = useState(false);
 
   const addToCart = (product) => {
     setCart([...cart, product]);
@@ -40,11 +41,18 @@ export const ShopProvider = ({ children }) => {
     setCart(cart.filter(item => item.id !== productId));
   };
 
+  const getCartCount = () => {
+    return cart.length;
+  };
+
   const value = {
     products,
     cart,
     addToCart,
-    removeFromCart
+    removeFromCart,
+    getCartCount,
+    showSearch,
+    setShowSearch
   };
 
   return (
@@ -62,4 +70,4 @@ export const useShop = () => {
   return context;
 };
 
-export default ShopContext;
+// Removed default export in favor of named exports

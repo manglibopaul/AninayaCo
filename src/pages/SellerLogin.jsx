@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { toast } from 'react-toastify'
 
 const SellerLogin = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [isLogin, setIsLogin] = useState(true)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -19,11 +19,13 @@ const SellerLogin = () => {
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
+    setError('') // Clear error on input change
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setError('')
 
     try {
       const endpoint = isLogin
@@ -31,22 +33,22 @@ const SellerLogin = () => {
         : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sellers/register`
 
       console.log('Sending request to:', endpoint)
-      console.log('Form data:', formData)
 
-      const response = await axios.post(endpoint, formData)
+      const response = await axios.post(endpoint, formData, {
+        timeout: 30000, // 30 second timeout
+      })
       
       console.log('Response:', response.data)
 
       // Store token
       localStorage.setItem('sellerToken', response.data.token)
       localStorage.setItem('seller', JSON.stringify(response.data.seller))
-
-      toast.success(isLogin ? 'Logged in successfully!' : 'Registered successfully!')
       navigate('/seller/dashboard')
     } catch (error) {
       console.error('Full error:', error)
       const errorMsg = error.response?.data?.message || error.message || 'Error occurred'
-      toast.error(errorMsg)
+      setError(errorMsg)
+      console.error('Login error:', errorMsg)
     } finally {
       setLoading(false)
     }
@@ -58,6 +60,12 @@ const SellerLogin = () => {
         <h2 className='text-2xl font-bold mb-6 text-center'>
           {isLogin ? 'Seller Login' : 'Seller Registration'}
         </h2>
+
+        {error && (
+          <div className='mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded'>
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className='space-y-4'>
           {!isLogin && (

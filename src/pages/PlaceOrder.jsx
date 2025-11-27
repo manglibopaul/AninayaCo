@@ -51,9 +51,9 @@ const PlaceOrder = () => {
                   <p className={`min-w-3.5 h-3.5 border rounded-full border-black ${method === 'gcash' ? 'bg-green-400' : ''}`}></p>
                   <img className='h-8 mx-9' src={assets.gcash_logo} alt="" />
                 </div>
-                <div onClick={()=>setMethod('paypal')} className='flex items-center gap-3 border p-2 px-3 cursor-pointer border-pink-300'>
-                  <p className={`min-w-3.5 h-3.5 border rounded-full border-black ${method === 'paypal' ? 'bg-green-400' : ''}`}></p>
-                  <img className='h-8 mx-9' src={assets.paypal_logo} alt="" />
+                <div onClick={()=>setMethod('pickup')} className='flex items-center gap-3 border p-2 px-3 cursor-pointer border-pink-300'>
+                  <p className={`min-w-3.5 h-3.5 border rounded-full border-black ${method === 'pickup' ? 'bg-green-400' : ''}`}></p>
+                  <p className='text-gray-500 text-sm font-medium mx-9'>PICK UP</p>
                 </div>
                 <div onClick={()=>setMethod('cod')} className='flex items-center gap-3 border p-2 px-3 cursor-pointer border-pink-300'>
                   <p className={`min-w-3.5 h-3.5 border rounded-full border-black ${method === 'cod' ? 'bg-green-400' : ''}`}></p>

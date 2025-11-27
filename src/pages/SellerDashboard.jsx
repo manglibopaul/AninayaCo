@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { toast } from 'react-toastify'
 
 import { ShopContext } from '../context/ShopContext'
 
@@ -32,7 +31,7 @@ const SellerDashboard = () => {
 
   useEffect(() => {
     if (!token) {
-      navigate('/seller/login')
+      navigate('/')
       return
     }
 
@@ -90,12 +89,18 @@ const SellerDashboard = () => {
   }
 
   const handleImageChange = (e) => {
-    const files = Array.from(e.target.files)
+    const files = Array.from(e.target.files || [])
+    console.log('Files selected:', files.length, files)
     setFormData(prev => ({ ...prev, image: files }))
     
     // Create preview
     const previews = files.map(file => URL.createObjectURL(file))
     setImagePreview(previews)
+    
+    // Reset input after setting state (allows selecting same files again)
+    setTimeout(() => {
+      e.target.value = ''
+    }, 0)
   }
 
   const handleModelChange = (e) => {
@@ -117,9 +122,10 @@ const SellerDashboard = () => {
       uploadData.append('subCategory', formData.subCategory)
       uploadData.append('stock', formData.stock)
 
-      // Add multiple images
+      // Add multiple images (only if they are new files)
       if (formData.image && formData.image.length > 0) {
         formData.image.forEach((img, idx) => {
+          // Only append if it's a File object (new upload), not existing image data
           if (img instanceof File) {
             uploadData.append('image', img)
           }
@@ -139,7 +145,6 @@ const SellerDashboard = () => {
             'Content-Type': 'multipart/form-data',
           },
         })
-        toast.success('Product updated successfully!')
       } else {
         // Create
         await axios.post(`${apiUrl}/api/products`, uploadData, {
@@ -148,7 +153,6 @@ const SellerDashboard = () => {
             'Content-Type': 'multipart/form-data',
           },
         })
-        toast.success('Product added successfully!')
       }
 
       // refresh seller view
@@ -158,7 +162,6 @@ const SellerDashboard = () => {
       resetForm()
       setShowForm(false)
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Error saving product')
       console.error(error)
     } finally {
       setLoading(false)
@@ -173,11 +176,10 @@ const SellerDashboard = () => {
       await axios.delete(`${apiUrl}/api/products/${productId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      toast.success('Product deleted successfully!')
       fetchProducts()
       try { refreshProducts && refreshProducts() } catch (e) {}
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Error deleting product')
+      console.error(error)
     } finally {
       setLoading(false)
     }
@@ -192,8 +194,20 @@ const SellerDashboard = () => {
       category: product.category,
       subCategory: product.subCategory,
       stock: product.stock,
-      image: product.image,
+      image: product.image || [],
     })
+    // Show existing images in preview
+    if (product.image && Array.isArray(product.image)) {
+      const previews = product.image.map(img => {
+        if (typeof img === 'string') {
+          return img.startsWith('http') ? img : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${img}`
+        }
+        return img.url
+      })
+      setImagePreview(previews)
+    } else {
+      setImagePreview([])
+    }
     setShowForm(true)
   }
 
@@ -227,12 +241,20 @@ const SellerDashboard = () => {
             <h1 className='text-3xl font-bold'>Seller Dashboard</h1>
             {seller && <p className='text-gray-400'>{seller.storeName}</p>}
           </div>
-          <button
-            onClick={handleLogout}
-            className='bg-red-600 hover:bg-red-700 px-6 py-2 rounded-lg font-medium'
-          >
-            Logout
-          </button>
+          <div className='flex gap-3'>
+            <button
+              onClick={() => navigate('/seller/profile')}
+              className='bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-medium'
+            >
+              Profile
+            </button>
+            <button
+              onClick={handleLogout}
+              className='bg-red-600 hover:bg-red-700 px-6 py-2 rounded-lg font-medium'
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </div>
 
@@ -336,19 +358,33 @@ const SellerDashboard = () => {
               />
 
               <div className='col-span-1 md:col-span-2'>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>Product Images</label>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  Product Images <span className='text-red-500'>*</span>
+                  <span className='text-xs text-gray-500 font-normal ml-2'>(Add 3 or more images)</span>
+                </label>
                 <input
+                  id='product-images'
                   type='file'
                   multiple
                   accept='image/*'
                   onChange={handleImageChange}
                   className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black'
                 />
+                <p className='text-xs text-gray-500 mt-1'>Recommended: Upload at least 3 different angles of your product</p>
                 {imagePreview.length > 0 && (
-                  <div className='mt-3 grid grid-cols-2 md:grid-cols-4 gap-2'>
-                    {imagePreview.map((preview, idx) => (
-                      <img key={idx} src={preview} alt={`Preview ${idx}`} className='w-full h-24 object-cover rounded border border-gray-200' />
-                    ))}
+                  <div className='mt-3'>
+                    <p className='text-sm text-gray-600 mb-2'>
+                      Selected images: <span className='font-medium text-green-600'>{imagePreview.length}</span>
+                      {imagePreview.length < 3 && <span className='text-xs text-orange-600 ml-2'>(Recommended: 3+)</span>}
+                    </p>
+                    <div className='grid grid-cols-2 md:grid-cols-4 gap-2'>
+                      {imagePreview.map((preview, idx) => (
+                        <div key={idx} className='relative'>
+                          <img src={preview} alt={`Preview ${idx}`} className='w-full h-24 object-cover rounded border border-gray-200' />
+                          <span className='absolute top-1 right-1 bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>{idx + 1}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

@@ -53,16 +53,24 @@ export const loginSeller = async (req, res) => {
       return res.status(400).json({ message: 'Please provide email and password' });
     }
 
+    console.log('🔍 Looking up seller with email:', email);
+    const startTime = Date.now();
+    
     const seller = await Seller.findOne({ where: { email } });
+    const lookupTime = Date.now() - startTime;
+    console.log(`⏱️ Seller lookup took ${lookupTime}ms`);
+    
     if (!seller) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
+    console.log('🔐 Comparing passwords...');
     const isPasswordValid = await seller.matchPassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
+    console.log('✅ Password valid, generating token...');
     const token = generateSellerToken(seller.id);
 
     res.status(200).json({
