@@ -7,6 +7,10 @@ const Navbar = () => {
 
     const [visible,setVisible] = useState(false);
     const sellerToken = localStorage.getItem('sellerToken');
+    const sellerRaw = localStorage.getItem('seller')
+    let sellerObj = null
+    try { sellerObj = sellerRaw ? JSON.parse(sellerRaw) : null } catch (e) { sellerObj = null }
+    const sellerLabel = sellerObj?.storeName || 'Aninaya.co'
 
     const {setShowSearch , getCartCount} = useContext(ShopContext); 
 
@@ -42,9 +46,13 @@ const Navbar = () => {
                 <p className='absolute right-[-5px] bottom-[-5px] w-4 text-center leading-4 bg-black text-white aspect-square rounded-full text-[8px]'>{getCartCount()}</p>
             </Link>
 
+            <Link to='/chat' className='text-sm text-gray-700 hover:text-black'>
+              Chat
+            </Link>
+
             {sellerToken && (
               <Link to='/seller/profile' className='text-sm text-gray-700 hover:text-black'>
-                Seller
+                {sellerLabel}
               </Link>
             )}
 

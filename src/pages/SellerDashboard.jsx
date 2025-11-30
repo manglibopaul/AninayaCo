@@ -1,8 +1,49 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { toast } from 'react-toastify'
 
 import { ShopContext } from '../context/ShopContext'
+import SellerChat from '../components/SellerChat'
+
+// Helper: Compress image before upload
+const compressImage = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = (event) => {
+      const img = new Image()
+      img.src = event.target.result
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        
+        // Calculate new dimensions (max 1000px width)
+        let width = img.width
+        let height = img.height
+        const maxWidth = 1000
+        
+        if (width > maxWidth) {
+          height = (maxWidth / width) * height
+          width = maxWidth
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        ctx.drawImage(img, 0, 0, width, height)
+        
+        canvas.toBlob(
+          (blob) => {
+            const compressedFile = new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() })
+            resolve(compressedFile)
+          },
+          'image/jpeg',
+          0.8 // 80% quality
+        )
+      }
+    }
+  })
+}
 
 const SellerDashboard = () => {
   const navigate = useNavigate()
@@ -10,9 +51,12 @@ const SellerDashboard = () => {
   const [products, setProducts] = useState([])
   const [sellerOrders, setSellerOrders] = useState([])
   const [selectedTab, setSelectedTab] = useState('products')
+  const [lowStockThreshold, setLowStockThreshold] = useState(5)
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadError, setUploadError] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -79,6 +123,7 @@ const SellerDashboard = () => {
     }
   }
 
+
   useEffect(() => {
     if (selectedTab === 'orders') fetchSellerOrders()
   }, [selectedTab])
@@ -88,16 +133,30 @@ const SellerDashboard = () => {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const files = Array.from(e.target.files || [])
     console.log('Files selected:', files.length, files)
-    setFormData(prev => ({ ...prev, image: files }))
     
-    // Create preview
-    const previews = files.map(file => URL.createObjectURL(file))
-    setImagePreview(previews)
+    if (files.length > 0) {
+      toast.info('Compressing images...')
+      try {
+        // Compress all images
+        const compressedImages = await Promise.all(
+          files.map(file => compressImage(file))
+        )
+        setFormData(prev => ({ ...prev, image: compressedImages }))
+        
+        // Create preview
+        const previews = compressedImages.map(file => URL.createObjectURL(file))
+        setImagePreview(previews)
+        toast.success(`${compressedImages.length} image(s) compressed and ready`)
+      } catch (error) {
+        console.error('Image compression error:', error)
+        toast.error('Failed to compress images')
+      }
+    }
     
-    // Reset input after setting state (allows selecting same files again)
+    // Reset input after setting state
     setTimeout(() => {
       e.target.value = ''
     }, 0)
@@ -111,8 +170,17 @@ const SellerDashboard = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setUploadProgress(0)
+    setUploadError('')
 
     try {
+      // Validate form
+      if (!formData.name || !formData.description || !formData.price || !formData.stock) {
+        toast.error('Please fill in all required fields')
+        setLoading(false)
+        return
+      }
+
       // Create FormData for multipart upload
       const uploadData = new FormData()
       uploadData.append('name', formData.name)
@@ -137,34 +205,60 @@ const SellerDashboard = () => {
         uploadData.append('model', formData.model)
       }
 
+      // Create axios instance with custom timeout and progress
+      const axiosInstance = axios.create({
+        timeout: 5 * 60 * 1000, // 5 minute timeout for slow connections
+      })
+
+      let uploadUrl = `${apiUrl}/api/products`
       if (editingProduct) {
-        // Update
-        await axios.put(`${apiUrl}/api/products/${editingProduct.id}`, uploadData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        })
-      } else {
-        // Create
-        await axios.post(`${apiUrl}/api/products`, uploadData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        })
+        uploadUrl = `${apiUrl}/api/products/${editingProduct.id}`
       }
 
-      // refresh seller view
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          setUploadProgress(percentCompleted)
+        },
+      }
+
+      let response
+      if (editingProduct) {
+        response = await axiosInstance.put(uploadUrl, uploadData, config)
+      } else {
+        response = await axiosInstance.post(uploadUrl, uploadData, config)
+      }
+
+      // Success
+      toast.success(editingProduct ? 'Product updated successfully!' : 'Product created successfully!')
+      
+      // Refresh product lists
       fetchProducts()
-      // refresh customer-facing product list
       try { refreshProducts && refreshProducts() } catch (e) {}
       resetForm()
       setShowForm(false)
+      setUploadProgress(0)
     } catch (error) {
-      console.error(error)
+      console.error('Upload error:', error)
+      let errorMsg = 'Failed to upload product'
+      
+      if (error.code === 'ECONNABORTED') {
+        errorMsg = 'Upload timed out. Check your connection and try again.'
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message
+      } else if (error.message) {
+        errorMsg = error.message
+      }
+      
+      setUploadError(errorMsg)
+      toast.error(errorMsg)
     } finally {
       setLoading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -273,6 +367,16 @@ const SellerDashboard = () => {
               className={`px-4 py-2 rounded-lg font-medium ${selectedTab === 'orders' ? 'bg-black text-white' : 'bg-gray-200'}`}>
               Orders ({sellerOrders.length})
             </button>
+                  <button
+                    onClick={() => setSelectedTab('chat')}
+                    className={`px-4 py-2 rounded-lg font-medium ${selectedTab === 'chat' ? 'bg-black text-white' : 'bg-gray-200'}`}>
+                    Chat
+                  </button>
+            <button
+              onClick={() => setSelectedTab('inventory')}
+              className={`px-4 py-2 rounded-lg font-medium ${selectedTab === 'inventory' ? 'bg-black text-white' : 'bg-gray-200'}`}>
+              Inventory
+            </button>
           </div>
 
           <button
@@ -294,6 +398,26 @@ const SellerDashboard = () => {
               {editingProduct ? 'Edit Product' : 'Add New Product'}
             </h2>
 
+            {/* Error Display */}
+            {uploadError && (
+              <div className='mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded'>
+                ⚠️ {uploadError}
+              </div>
+            )}
+
+            {/* Upload Progress */}
+            {uploadProgress > 0 && uploadProgress < 100 && (
+              <div className='mb-4'>
+                <p className='text-sm text-gray-600 mb-1'>Uploading: {uploadProgress}%</p>
+                <div className='w-full bg-gray-200 rounded-lg h-2 overflow-hidden'>
+                  <div
+                    className='bg-blue-600 h-full transition-all duration-300'
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               <input
                 type='text'
@@ -301,7 +425,8 @@ const SellerDashboard = () => {
                 placeholder='Product Name'
                 value={formData.name}
                 onChange={handleChange}
-                className='col-span-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black'
+                disabled={loading}
+                className='col-span-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black disabled:bg-gray-100'
                 required
               />
 
@@ -309,7 +434,8 @@ const SellerDashboard = () => {
                 name='category'
                 value={formData.category}
                 onChange={handleChange}
-                className='px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black'
+                disabled={loading}
+                className='px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black disabled:bg-gray-100'
               >
                 <option value='Accessories'>Accessories</option>
                 <option value='Decor'>Decor</option>
@@ -320,7 +446,8 @@ const SellerDashboard = () => {
                 name='subCategory'
                 value={formData.subCategory}
                 onChange={handleChange}
-                className='px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black'
+                disabled={loading}
+                className='px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black disabled:bg-gray-100'
               >
                 <option value='Keychains'>Keychains</option>
                 <option value='Bouquets'>Bouquets</option>
@@ -333,7 +460,8 @@ const SellerDashboard = () => {
                 placeholder='Price'
                 value={formData.price}
                 onChange={handleChange}
-                className='px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black'
+                disabled={loading}
+                className='px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black disabled:bg-gray-100'
                 required
               />
 
@@ -343,7 +471,8 @@ const SellerDashboard = () => {
                 placeholder='Stock Quantity'
                 value={formData.stock}
                 onChange={handleChange}
-                className='px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black'
+                disabled={loading}
+                className='px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black disabled:bg-gray-100'
                 required
               />
 
@@ -405,15 +534,23 @@ const SellerDashboard = () => {
               <button
                 type='submit'
                 disabled={loading}
-                className='col-span-1 md:col-span-2 bg-black text-white py-2 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50'
+                className='col-span-1 md:col-span-2 bg-black text-white py-2 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed'
               >
-                {loading ? 'Saving...' : (editingProduct ? 'Update Product' : 'Add Product')}
+                {loading ? (
+                  <>
+                    <span className='inline-block mr-2'>⏳</span>
+                    {uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : 'Processing...'}
+                  </>
+                ) : (
+                  editingProduct ? 'Update Product' : 'Create Product'
+                )}
               </button>
             </form>
           </div>
         )}
 
-        {selectedTab === 'products' ? (
+        {/* Tab panels */}
+        {selectedTab === 'products' && (
           <div className='bg-white rounded-lg shadow-lg overflow-hidden'>
             <div className='p-6 border-b border-gray-200'>
               <h2 className='text-2xl font-bold'>Your Products ({products.length})</h2>
@@ -463,7 +600,9 @@ const SellerDashboard = () => {
               </div>
             )}
           </div>
-        ) : (
+        )}
+
+        {selectedTab === 'orders' && (
           <div className='bg-white rounded-lg shadow-lg overflow-hidden'>
             <div className='p-6 border-b border-gray-200'>
               <h2 className='text-2xl font-bold'>Orders ({sellerOrders.length})</h2>
@@ -500,13 +639,124 @@ const SellerDashboard = () => {
                           ))}
                         </td>
                         <td className='px-6 py-4 text-sm text-gray-700'>₱{order.total}</td>
-                        <td className='px-6 py-4 text-sm text-gray-700'>{order.orderStatus}</td>
+                        <td className='px-6 py-4 text-sm text-gray-700'>
+                          <select
+                            value={order.orderStatus}
+                            onChange={async (e) => {
+                              const newStatus = e.target.value
+                              try {
+                                await axios.put(`${apiUrl}/api/orders/${order.id}/status`, { status: newStatus }, {
+                                  headers: { Authorization: `Bearer ${token}` },
+                                })
+                                toast.success('Order status updated')
+                                fetchSellerOrders()
+                              } catch (err) {
+                                console.error(err)
+                                toast.error('Failed to update status')
+                              }
+                            }}
+                            className='px-2 py-1 border rounded'>
+                            <option value='pending'>pending</option>
+                            <option value='processing'>processing</option>
+                            <option value='shipped'>shipped</option>
+                            <option value='completed'>completed</option>
+                            <option value='cancelled'>cancelled</option>
+                          </select>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {selectedTab === 'chat' && (
+          <div className='bg-white rounded-lg shadow-lg p-6'>
+            <h2 className='text-2xl font-bold mb-4'>Messages</h2>
+            <SellerChat />
+          </div>
+        )}
+
+        
+
+        {selectedTab === 'inventory' && (
+          <div className='bg-white rounded-lg shadow-lg overflow-hidden p-6'>
+            <div className='flex items-center justify-between mb-4'>
+              <h2 className='text-2xl font-bold'>Inventory</h2>
+              <div className='flex items-center gap-2'>
+                <label className='text-sm text-gray-600'>Low stock threshold</label>
+                <input type='number' value={lowStockThreshold} onChange={(e) => setLowStockThreshold(Number(e.target.value) || 1)} className='w-20 px-2 py-1 border rounded' />
+              </div>
+            </div>
+
+            {/* Low stock alerts */}
+            <div className='mb-6'>
+              <h3 className='font-medium mb-2'>Low Stock Items</h3>
+              {products.filter(p => Number(p.stock) <= lowStockThreshold).length === 0 ? (
+                <div className='text-sm text-gray-500'>No low-stock items.</div>
+              ) : (
+                <div className='grid gap-3'>
+                  {products.filter(p => Number(p.stock) <= lowStockThreshold).map(p => (
+                    <div key={p.id} className='flex items-center justify-between border p-3 rounded'>
+                      <div>
+                        <div className='font-medium'>{p.name}</div>
+                        <div className='text-sm text-gray-600'>Stock: {p.stock}</div>
+                      </div>
+                      <div className='flex items-center gap-2'>
+                        <input type='number' min='1' placeholder='Add qty' id={`restock-${p.id}`} className='w-24 px-2 py-1 border rounded' />
+                        <button
+                          onClick={async () => {
+                            const input = document.getElementById(`restock-${p.id}`)
+                            const qty = Number(input?.value || 0)
+                            if (qty <= 0) return toast.error('Enter a quantity to add')
+                            try {
+                              await axios.put(`${apiUrl}/api/products/${p.id}`, { stock: Number(p.stock) + qty }, {
+                                headers: { Authorization: `Bearer ${token}` },
+                              })
+                              toast.success('Stock updated')
+                              fetchProducts()
+                            } catch (err) {
+                              console.error(err)
+                              toast.error('Failed to update stock')
+                            }
+                          }}
+                          className='bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded'
+                        >
+                          Restock
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Full product inventory table */}
+            <div className='overflow-x-auto'>
+              <table className='w-full'>
+                <thead className='bg-gray-50 border-b border-gray-200'>
+                  <tr>
+                    <th className='px-6 py-3 text-left text-sm font-medium text-gray-700'>Product</th>
+                    <th className='px-6 py-3 text-left text-sm font-medium text-gray-700'>Stock</th>
+                    <th className='px-6 py-3 text-left text-sm font-medium text-gray-700'>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map(p => (
+                    <tr key={p.id} className='border-b border-gray-200 hover:bg-gray-50'>
+                      <td className='px-6 py-4 text-sm font-medium text-gray-900'>{p.name}</td>
+                      <td className='px-6 py-4 text-sm text-gray-700'>{p.stock}</td>
+                      <td className='px-6 py-4 text-sm space-x-2'>
+                        <button onClick={() => handleEdit(p)} className='bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded'>Edit</button>
+                        <button onClick={() => handleDelete(p.id)} className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded'>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

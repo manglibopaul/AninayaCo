@@ -12,12 +12,14 @@ import Order from './models/Order.js';
 import Review from './models/Review.js';
 import Cart from './models/Cart.js';
 import Seller from './models/Seller.js';
+import ChatMessage from './models/ChatMessage.js';
 
 import { connectDB } from './config/database.js';
 import productRoutes from './routes/productRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import sellerRoutes from './routes/sellerRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
 
 dotenv.config();
 
@@ -66,6 +68,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/sellers', sellerRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

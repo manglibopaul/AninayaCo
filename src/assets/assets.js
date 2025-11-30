@@ -87,9 +87,11 @@ import gcash_logo from './gcash_logo.png'
 import catpaw_model from './catpaw.glb'
 import tulip_model from './tulip.glb'
 import sunflower_model from './sunflower.glb'
+import knot from './knot.jpg'
 
 export const assets = {
     logo,
+    knot,
     gcash_logo,
     qr_code,
     add_icon,
