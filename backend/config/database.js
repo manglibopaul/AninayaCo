@@ -23,7 +23,16 @@ const connectDB = async () => {
   try {
     await sequelize.authenticate();
     await sequelize.query('PRAGMA foreign_keys = OFF');
-    await sequelize.sync({ force: false, alter: false });
+    // Some SQLite ALTER operations create a temporary backup table (e.g. Reviews_backup)
+    // If a previous alter attempt left a backup table around, it can cause UNIQUE constraint errors
+    // when trying to copy rows into it. Drop such leftover backup table(s) before syncing.
+    try {
+      await sequelize.query('DROP TABLE IF EXISTS `Reviews_backup`');
+    } catch (e) {
+      // ignore drop errors and continue
+    }
+    // Use `alter: true` to update existing tables to match models (adds missing columns safely)
+    await sequelize.sync({ force: false, alter: true });
     await sequelize.query('PRAGMA foreign_keys = ON');
     dbConnected = true;
     console.log('✅ SQLite database connected successfully');

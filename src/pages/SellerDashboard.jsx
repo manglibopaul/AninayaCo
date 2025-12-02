@@ -52,6 +52,8 @@ const SellerDashboard = () => {
   const [products, setProducts] = useState([])
   const [sellerOrders, setSellerOrders] = useState([])
   const [selectedTab, setSelectedTab] = useState('products')
+  const [sellerReviews, setSellerReviews] = useState([])
+  const [replyDrafts, setReplyDrafts] = useState({})
   const [lowStockThreshold, setLowStockThreshold] = useState(5)
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
@@ -85,7 +87,9 @@ const SellerDashboard = () => {
       setSeller(JSON.parse(sellerData))
     }
 
+    // Fetch products and seller orders on mount so counts show correctly after refresh
     fetchProducts()
+    fetchSellerOrders()
   }, [token, navigate])
 
   const fetchProducts = async () => {
@@ -124,9 +128,45 @@ const SellerDashboard = () => {
     }
   }
 
+  const fetchSellerReviews = async () => {
+    try {
+      setLoading(true)
+      const res = await axios.get(`${apiUrl}/api/reviews/seller`, { headers: { Authorization: `Bearer ${token}` } })
+      setSellerReviews(res.data || [])
+    } catch (err) {
+      console.error('fetchSellerReviews', err)
+      if (err.response?.status === 401) {
+        localStorage.removeItem('sellerToken')
+        navigate('/seller/login')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleReplyChange = (reviewId, text) => {
+    setReplyDrafts(prev => ({ ...prev, [reviewId]: text }))
+  }
+
+  const submitReply = async (review) => {
+    const draft = replyDrafts[review.id] || ''
+    if (!draft) return toast.error('Enter a reply')
+    try {
+      setLoading(true)
+      const res = await axios.post(`${apiUrl}/api/reviews/${review.id}/reply`, { reply: draft }, { headers: { Authorization: `Bearer ${token}` } })
+      setSellerReviews(prev => prev.map(r => r.id === res.data.id ? res.data : r))
+      toast.success('Reply posted')
+    } catch (err) {
+      console.error('submitReply', err)
+      toast.error(err.response?.data?.message || 'Failed to post reply')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (selectedTab === 'orders') fetchSellerOrders()
+    if (selectedTab === 'reviews') fetchSellerReviews()
   }, [selectedTab])
 
   const handleChange = (e) => {
@@ -380,6 +420,11 @@ const SellerDashboard = () => {
                     onClick={() => setSelectedTab('chat')}
                     className={`px-4 py-2 rounded-lg font-medium ${selectedTab === 'chat' ? 'bg-black text-white' : 'bg-gray-200'}`}>
                     Chat
+                  </button>
+                  <button
+                    onClick={() => setSelectedTab('reviews')}
+                    className={`px-4 py-2 rounded-lg font-medium ${selectedTab === 'reviews' ? 'bg-black text-white' : 'bg-gray-200'}`}>
+                    Reviews
                   </button>
                         {/* Admin tab removed from tabs row — use the Admin button in the header to open Admin */}
             <button
@@ -638,7 +683,7 @@ const SellerDashboard = () => {
                   <tbody>
                     {sellerOrders.map((order) => (
                       <tr key={order.id} className='border-b border-gray-200 hover:bg-gray-50'>
-                        <td className='px-6 py-4 text-sm font-medium text-gray-900'>#{order.id}</td>
+                        <td className='px-6 py-4 text-sm font-medium text-gray-900'>Order</td>
                         <td className='px-6 py-4 text-sm text-gray-700'>{order.firstName} {order.lastName} <div className='text-xs text-gray-500'>{order.email}</div></td>
                         <td className='px-6 py-4 text-sm text-gray-700'>
                           {order.sellerItems.map((it, idx) => (
@@ -701,6 +746,53 @@ const SellerDashboard = () => {
           <div className='bg-white rounded-lg shadow-lg p-6'>
             <h2 className='text-2xl font-bold mb-4'>Messages</h2>
             <SellerChat />
+          </div>
+        )}
+
+        {selectedTab === 'reviews' && (
+          <div className='bg-white rounded-lg shadow-lg p-6'>
+            <h2 className='text-2xl font-bold mb-4'>Product Reviews</h2>
+
+            {loading && !sellerReviews.length ? (
+              <div className='text-sm text-gray-500'>Loading reviews...</div>
+            ) : sellerReviews.length === 0 ? (
+              <div className='text-sm text-gray-500'>No reviews yet for your products.</div>
+            ) : (
+              <div className='space-y-4'>
+                {sellerReviews.map((r) => (
+                  <div key={r.id} className='p-4 border rounded bg-gray-50'>
+                    <div className='flex items-start justify-between'>
+                      <div>
+                        <div className='text-sm font-medium'>{r.userName || 'Customer'}</div>
+                        <div className='text-xs text-gray-500'>{new Date(r.createdAt).toLocaleString()}</div>
+                        <div className='text-sm text-gray-700 mt-2'>{r.comment}</div>
+                      </div>
+                      <div className='text-sm text-gray-600 ml-4'>Rating: {r.rating}</div>
+                    </div>
+
+                    {r.sellerReply ? (
+                      <div className='mt-3 p-3 bg-white border rounded'>
+                        <div className='text-sm font-medium'>Your reply</div>
+                        <div className='text-sm text-gray-700 mt-1'>{r.sellerReply}</div>
+                        <div className='text-xs text-gray-400 mt-1'>{r.sellerReplyAt ? new Date(r.sellerReplyAt).toLocaleString() : ''}</div>
+                      </div>
+                    ) : (
+                      <div className='mt-3'>
+                        <textarea
+                          placeholder='Write a public reply to this review'
+                          value={replyDrafts[r.id] || ''}
+                          onChange={(e) => handleReplyChange(r.id, e.target.value)}
+                          className='w-full border rounded p-2'
+                        />
+                        <div className='mt-2 flex gap-2'>
+                          <button onClick={() => submitReply(r)} className='bg-black text-white px-4 py-2 rounded'>Post Reply</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

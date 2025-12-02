@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import Title from '../components/Title';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
+
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const cancelOrder = async (orderId) => {
     const token = localStorage.getItem('token') || localStorage.getItem('userToken');
@@ -62,7 +65,7 @@ const Orders = () => {
             for (let i = 0; i < items.length; i++) {
               const it = items[i];
               const hasImage = it.image && ((Array.isArray(it.image) && it.image.length) || typeof it.image === 'string');
-              if (!hasImage) {
+                if (!hasImage) {
                 const prodId = it.productId || it.id || it._id;
                 if (prodId) {
                   try {
@@ -100,8 +103,6 @@ const Orders = () => {
     fetchOrders();
   }, []);
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
   const resolveImage = (image) => {
     let imageUrl = '/path/to/placeholder.jpg';
     if (!image) return imageUrl;
@@ -135,7 +136,7 @@ const Orders = () => {
           <div key={order.id} className='py-4 border-t border-b text-gray-700 flex flex-col gap-4'>
             <div className='flex justify-between items-start'>
               <div>
-                <p className='text-sm text-gray-500'>Order #{order.id}</p>
+                <p className='text-sm text-gray-500'>Order</p>
                 <p className='text-sm text-gray-500'>Date: {new Date(order.createdAt).toLocaleString()}</p>
               </div>
               <div className='text-right'>
@@ -166,12 +167,33 @@ const Orders = () => {
             <div className='flex items-center justify-between'>
               <div className='text-sm text-gray-500'>Payment: {order.paymentMethod || 'N/A'}</div>
               <div className='flex items-center gap-2'>
-                {order.orderStatus !== 'cancelled' && (
+                {order.orderStatus !== 'cancelled' && order.orderStatus !== 'completed' && (
                   <button onClick={() => cancelOrder(order.id)} className='bg-red-500 text-white px-3 py-1 rounded text-sm'>Cancel</button>
                 )}
                 <Link to={`/orders/${order.id}`} className='border px-4 py-2 text-sm font-medium rounded-sm hover:bg-gray-100 duration-200'>
                   View Order
                 </Link>
+                {order.orderStatus === 'completed' && (
+                  <button
+                    onClick={() => {
+                      try {
+                        const firstItem = Array.isArray(order.items) && order.items.length ? order.items[0] : null;
+                        const pid = firstItem ? (firstItem.productId || firstItem.id || firstItem._id) : null;
+                        const hash = pid ? `#review-form-${pid}` : '';
+                        navigate(`/orders/${order.id}?focusReview=1${hash}`);
+                      } catch (e) {
+                        // fallback to location assign
+                        const firstItem = Array.isArray(order.items) && order.items.length ? order.items[0] : null;
+                        const pid = firstItem ? (firstItem.productId || firstItem.id || firstItem._id) : null;
+                        const hash = pid ? `#review-form-${pid}` : '';
+                        window.location.href = `/orders/${order.id}?focusReview=1${hash}`;
+                      }
+                    }}
+                    className='border px-4 py-2 text-sm font-medium rounded-sm hover:bg-gray-100 duration-200'
+                  >
+                    Write Review
+                  </button>
+                )}
               </div>
             </div>
           </div>

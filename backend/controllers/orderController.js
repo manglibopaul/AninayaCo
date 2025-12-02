@@ -32,6 +32,11 @@ export const createOrder = async (req, res) => {
       })
     );
 
+    // Determine shipping fee and initial status for pickup vs delivery
+    const isPickup = paymentMethod === 'pickup';
+    const shippingFee = isPickup ? 0 : 40;
+    const initialStatus = isPickup ? 'ready for pickup' : 'processing';
+
     const order = await Order.create({
       userId: req.user.id,
       items: normalizedItems,
@@ -47,9 +52,10 @@ export const createOrder = async (req, res) => {
       paymentMethod,
       subtotal,
       commission,
-      shippingFee: 40,
-      total: subtotal + 40 + commission,
+      shippingFee,
+      total: subtotal + shippingFee + commission,
       paymentStatus: 'pending',
+      orderStatus: initialStatus,
     });
 
     res.status(201).json(order);
@@ -179,8 +185,13 @@ export const cancelOrder = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    await order.update({ orderStatus: 'cancelled' });
-    res.json(order);
+      // Do not allow cancelling an order that is already completed
+      if (order.orderStatus === 'completed') {
+        return res.status(400).json({ message: 'Cannot cancel an order that is already completed' });
+      }
+
+      await order.update({ orderStatus: 'cancelled' });
+      res.json(order);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -49,21 +49,29 @@ const PlaceOrder = () => {
         <div className='text-xl sm:text-2xl my-3'>
           <Title text1={'DELIVERY'} text2={'INFORMATION'}/>
         </div>
-          <div className='flex gap-3'>
-            <input value={firstName} onChange={e=>setFirstName(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='First name' />
-            <input value={lastName} onChange={e=>setLastName(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='Last name' />
-          </div>
-            <input value={email} onChange={e=>setEmail(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="email" placeholder='Email address' />
-            <input value={street} onChange={e=>setStreet(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='Street' />
-          <div className='flex gap-3'>
-            <input value={city} onChange={e=>setCity(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='City' />
-            <input value={province} onChange={e=>setProvince(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='Province' />
-          </div>
-          <div className='flex gap-3'>
-            <input value={zipcode} onChange={e=>setZipcode(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="number" placeholder='Zipcode' />
-            <input value={country} onChange={e=>setCountry(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='Country' />
-          </div>
-          <input value={phone} onChange={e=>setPhone(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='Phone' />
+          {method !== 'pickup' ? (
+            <>
+              <div className='flex gap-3'>
+                <input value={firstName} onChange={e=>setFirstName(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='First name' />
+                <input value={lastName} onChange={e=>setLastName(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='Last name' />
+              </div>
+              <input value={email} onChange={e=>setEmail(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="email" placeholder='Email address' />
+              <input value={street} onChange={e=>setStreet(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='Street' />
+              <div className='flex gap-3'>
+                <input value={city} onChange={e=>setCity(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='City' />
+                <input value={province} onChange={e=>setProvince(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='Province' />
+              </div>
+              <div className='flex gap-3'>
+                <input value={zipcode} onChange={e=>setZipcode(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="number" placeholder='Zipcode' />
+                <input value={country} onChange={e=>setCountry(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='Country' />
+              </div>
+              <input value={phone} onChange={e=>setPhone(e.target.value)} className='border border-pink-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='Phone' />
+            </>
+          ) : (
+            <div className='p-4 border rounded bg-yellow-50 text-sm text-gray-700'>
+              You selected <strong>Pick Up</strong>. No shipping address is required — your order will be held for pickup. We'll contact your email/phone when the order is ready.
+            </div>
+          )}
 
       </div>
 
@@ -105,7 +113,7 @@ const PlaceOrder = () => {
 
                     // compute subtotal
                     const subtotal = items.reduce((sum, it) => sum + (Number(it.price || 0) * Number(it.quantity || 0)), 0);
-                    const address = { firstName, lastName, email, street, city, state: province, zipcode, country, phone };
+                    const address = method === 'pickup' ? {} : { firstName, lastName, email, street, city, state: province, zipcode, country, phone };
 
                     try {
                       setPlacing(true);

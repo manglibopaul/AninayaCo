@@ -38,7 +38,7 @@ const SellerOrders = () => {
             <div key={o.id} className='p-4 border rounded'>
               <div className='flex justify-between'>
                 <div>
-                  <div className='font-semibold'>Order #{o.id}</div>
+                  <div className='font-semibold'>Order</div>
                   <div className='text-sm text-gray-600'>Buyer: {o.firstName} {o.lastName} ({o.email})</div>
                 </div>
                 <div className='text-right'>

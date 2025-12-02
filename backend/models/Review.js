@@ -35,6 +35,14 @@ const Review = sequelize.define('Review', {
     type: DataTypes.INTEGER,
     defaultValue: 0,
   },
+  sellerReply: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  sellerReplyAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
 }, {
   timestamps: true,
 });
