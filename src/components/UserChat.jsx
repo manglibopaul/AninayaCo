@@ -28,8 +28,26 @@ const UserChat = () => {
       setGuestId(id)
     }
     // For single-seller flow, auto-select the seller and load messages
-    setSelectedSeller({ sellerId: Number(SINGLE_SELLER_ID), sellerName: SINGLE_SELLER_NAME, lastAt: Date.now() })
-    fetchMessages(Number(SINGLE_SELLER_ID))
+    const init = async () => {
+      let sellerId = Number(SINGLE_SELLER_ID || 0)
+      // if SINGLE_SELLER_NAME is set, try to resolve actual seller id from backend
+      if ((!sellerId || sellerId === 0) && SINGLE_SELLER_NAME) {
+        try {
+          const res = await fetch(`${apiUrl}/api/sellers/by-name/${encodeURIComponent(SINGLE_SELLER_NAME)}`)
+          if (res.ok) {
+            const json = await res.json()
+            sellerId = Number(json.id)
+          }
+        } catch (err) {
+          console.warn('Failed to lookup seller by name', err)
+        }
+      }
+      if (sellerId) {
+        setSelectedSeller({ sellerId, sellerName: SINGLE_SELLER_NAME, lastAt: Date.now() })
+        fetchMessages(sellerId)
+      }
+    }
+    init()
     fetchConversations()
   }, [])
 
@@ -80,7 +98,29 @@ const UserChat = () => {
   }
 
   const sendMessage = async () => {
-    if (!text.trim() || !selectedSeller) return
+    if (!text.trim()) return
+    // ensure we have a selected seller; try to resolve if missing
+    let sellerId = selectedSeller?.sellerId
+    if (!sellerId) {
+      // try env id first
+      sellerId = Number(SINGLE_SELLER_ID || 0) || null
+      if (!sellerId && SINGLE_SELLER_NAME) {
+        try {
+          const res = await fetch(`${apiUrl}/api/sellers/by-name/${encodeURIComponent(SINGLE_SELLER_NAME)}`)
+          if (res.ok) {
+            const json = await res.json()
+            sellerId = Number(json.id)
+            setSelectedSeller({ sellerId, sellerName: SINGLE_SELLER_NAME, lastAt: Date.now() })
+          }
+        } catch (err) {
+          console.warn('Failed to lookup seller by name before sending message', err)
+        }
+      }
+    }
+    if (!sellerId) {
+      console.warn('No sellerId available, cannot send message')
+      return
+    }
     try {
       const body = { text: text.trim() }
       if (!token) {
@@ -88,7 +128,8 @@ const UserChat = () => {
         if (guestName) body.guestName = guestName
         if (guestEmail) body.guestEmail = guestEmail
       }
-      const res = await axios.post(`${apiUrl}/api/chat/user/${selectedSeller.sellerId}/message`, body, {
+      console.log('Sending message to sellerId', sellerId, 'body', body)
+      const res = await axios.post(`${apiUrl}/api/chat/user/${sellerId}/message`, body, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       setText('')
@@ -96,6 +137,8 @@ const UserChat = () => {
       setMessages(prev => [...prev, res.data])
       setTimeout(() => scrollToBottom(), 50)
       fetchConversations()
+      // refresh messages for this seller
+      fetchMessages(sellerId)
     } catch (err) {
       console.error('sendMessage', err)
       toast.error('Failed to send message')
@@ -110,11 +153,10 @@ const UserChat = () => {
   const isGuest = !token
 
   return (
-    <div className='min-h-[60vh] bg-white rounded-lg shadow p-4 grid grid-cols-1 md:grid-cols-3 gap-4'>
+    <div className='h-full bg-white rounded-lg shadow p-4 grid grid-cols-1 md:grid-cols-3 gap-4'>
       <div className='col-span-1 border-r pr-2'>
-        <div className='flex items-center justify-between mb-3'>
+        <div className='flex items-center mb-3'>
           <h3 className='font-semibold'>Conversations</h3>
-          <button onClick={fetchConversations} className='text-sm text-gray-600 hover:text-black'>Refresh</button>
         </div>
         {loading ? (
           <p className='text-gray-500'>Loading...</p>

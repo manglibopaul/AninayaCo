@@ -1,13 +1,6 @@
+// Full page Chat removed — this file intentionally renders nothing.
 import React from 'react'
-import UserChat from '../components/UserChat'
 
-const Chat = () => {
-  return (
-    <div className='mt-8'>
-      <h2 className='text-2xl font-bold mb-4'>Messages</h2>
-      <UserChat />
-    </div>
-  )
-}
+const Chat = () => null
 
 export default Chat

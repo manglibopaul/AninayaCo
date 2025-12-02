@@ -88,6 +88,7 @@ export const sellerSendMessage = async (req, res) => {
       const guestId = bodyGuestId || userId
       message = await ChatMessage.create({ guestId, guestName: guestName || null, guestEmail: guestEmail || null, sellerId, message: text, sender: 'seller', orderId: orderId || null })
     }
+    console.log('sellerSendMessage created:', { id: message.id, sellerId: message.sellerId, userId: message.userId, guestId: message.guestId, sender: message.sender })
     return res.status(201).json(message)
   } catch (error) {
     console.error('sellerSendMessage', error)
@@ -177,9 +178,22 @@ export const userSendMessage = async (req, res) => {
     } else {
       message = await ChatMessage.create({ guestId, guestName: guestName || null, guestEmail: guestEmail || null, sellerId: Number(sellerId), message: text, sender: 'user', orderId: orderId || null })
     }
+    console.log('userSendMessage created:', { id: message.id, sellerId: message.sellerId, userId: message.userId, guestId: message.guestId, sender: message.sender })
     return res.status(201).json(message)
   } catch (error) {
     console.error('userSendMessage', error)
     return res.status(500).json({ message: 'Failed to send message' })
+  }
+}
+
+// DEV: return recent chat messages for debugging (disabled in production)
+export const getRecentMessagesDev = async (req, res) => {
+  try {
+    if (process.env.NODE_ENV === 'production') return res.status(403).json({ message: 'Not allowed in production' })
+    const messages = await ChatMessage.findAll({ order: [['createdAt', 'DESC']], limit: 200 })
+    return res.json(messages)
+  } catch (error) {
+    console.error('getRecentMessagesDev', error)
+    return res.status(500).json({ message: 'Failed to fetch messages' })
   }
 }

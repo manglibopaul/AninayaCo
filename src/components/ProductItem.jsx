@@ -18,10 +18,16 @@ const ProductItem = ({id, image, name, price}) => {
           ? firstImage.url 
           : `${apiUrl}${firstImage.url}`;
       } else if (typeof firstImage === 'string') {
-        // If it's a string, check if it's relative
-        imageUrl = firstImage.startsWith('http') 
-          ? firstImage 
-          : `${apiUrl}${firstImage}`;
+          // If it's a string, normalize relative paths.
+          if (firstImage.startsWith('http')) {
+            imageUrl = firstImage;
+          } else if (firstImage.startsWith('/')) {
+            imageUrl = `${apiUrl}${firstImage}`;
+          } else {
+            // Seed data may contain bare filenames like 'p_img1.png'
+            // Assume uploads are served under `/uploads/images/`
+            imageUrl = `${apiUrl}/uploads/images/${firstImage}`;
+          }
       }
     }
 

@@ -5,6 +5,7 @@ import {
   getSellerProfile,
   updateSellerProfile,
   getSellerOrders,
+  findSellerByName,
 } from '../controllers/sellerController.js';
 import { verifySeller } from '../middleware/sellerAuth.js';
 
@@ -19,5 +20,8 @@ router.get('/profile', verifySeller, getSellerProfile);
 router.put('/profile', verifySeller, updateSellerProfile);
 // Seller's orders (orders that include their products)
 router.get('/orders', verifySeller, getSellerOrders);
+
+// Public: find seller by store name
+router.get('/by-name/:name', findSellerByName);
 
 export default router;

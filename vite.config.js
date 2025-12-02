@@ -5,6 +5,16 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()], 
   base: process.env.VITE_BASE_PATH || "/aninaya-e-commerce",
+  // Dev proxy: forward API calls to backend server during local development
+  server: {
+    proxy: {
+      '/api': {
+        target: process.env.DEV_API_URL || 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
   assetsInclude: ['**/*.glb', '**/*.usdz'],
   build: {
     minify: 'terser',

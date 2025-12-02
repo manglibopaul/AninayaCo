@@ -107,6 +107,20 @@ export const getSellerProfile = async (req, res) => {
   }
 };
 
+// Find seller by store name (public helper)
+export const findSellerByName = async (req, res) => {
+  try {
+    const { name } = req.params
+    if (!name) return res.status(400).json({ message: 'Name required' })
+    const seller = await Seller.findOne({ where: { storeName: name } })
+    if (!seller) return res.status(404).json({ message: 'Seller not found' })
+    return res.json({ id: seller.id, storeName: seller.storeName, name: seller.name })
+  } catch (error) {
+    console.error('findSellerByName', error)
+    return res.status(500).json({ message: 'Failed to find seller' })
+  }
+}
+
 // Update seller profile
 export const updateSellerProfile = async (req, res) => {
   try {

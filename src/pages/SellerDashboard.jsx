@@ -5,6 +5,7 @@ import { toast } from 'react-toastify'
 
 import { ShopContext } from '../context/ShopContext'
 import SellerChat from '../components/SellerChat'
+import SellerAdmin from './SellerAdmin'
 
 // Helper: Compress image before upload
 const compressImage = (file) => {
@@ -108,7 +109,7 @@ const SellerDashboard = () => {
   const fetchSellerOrders = async () => {
     try {
       setLoading(true)
-      const response = await axios.get(`${apiUrl}/api/sellers/orders`, {
+      const response = await axios.get(`${apiUrl}/api/orders/seller/my-orders`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       setSellerOrders(response.data || [])
@@ -342,6 +343,14 @@ const SellerDashboard = () => {
             >
               Profile
             </button>
+            {seller && (
+              <button
+                onClick={() => setSelectedTab('admin')}
+                className='bg-gray-800 hover:bg-gray-900 text-white px-6 py-2 rounded-lg font-medium'
+              >
+                Admin
+              </button>
+            )}
             <button
               onClick={handleLogout}
               className='bg-red-600 hover:bg-red-700 px-6 py-2 rounded-lg font-medium'
@@ -372,6 +381,7 @@ const SellerDashboard = () => {
                     className={`px-4 py-2 rounded-lg font-medium ${selectedTab === 'chat' ? 'bg-black text-white' : 'bg-gray-200'}`}>
                     Chat
                   </button>
+                        {/* Admin tab removed from tabs row — use the Admin button in the header to open Admin */}
             <button
               onClick={() => setSelectedTab('inventory')}
               className={`px-4 py-2 rounded-lg font-medium ${selectedTab === 'inventory' ? 'bg-black text-white' : 'bg-gray-200'}`}>
@@ -622,6 +632,7 @@ const SellerDashboard = () => {
                       <th className='px-6 py-3 text-left text-sm font-medium text-gray-700'>Items</th>
                       <th className='px-6 py-3 text-left text-sm font-medium text-gray-700'>Total</th>
                       <th className='px-6 py-3 text-left text-sm font-medium text-gray-700'>Status</th>
+                      <th className='px-6 py-3 text-left text-sm font-medium text-gray-700'>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -645,14 +656,15 @@ const SellerDashboard = () => {
                             onChange={async (e) => {
                               const newStatus = e.target.value
                               try {
-                                await axios.put(`${apiUrl}/api/orders/${order.id}/status`, { status: newStatus }, {
+                                // Seller-specific status update endpoint
+                                await axios.put(`${apiUrl}/api/orders/${order.id}/status-seller`, { orderStatus: newStatus }, {
                                   headers: { Authorization: `Bearer ${token}` },
                                 })
                                 toast.success('Order status updated')
                                 fetchSellerOrders()
                               } catch (err) {
                                 console.error(err)
-                                toast.error('Failed to update status')
+                                toast.error(err.response?.data?.message || 'Failed to update status')
                               }
                             }}
                             className='px-2 py-1 border rounded'>
@@ -662,6 +674,19 @@ const SellerDashboard = () => {
                             <option value='completed'>completed</option>
                             <option value='cancelled'>cancelled</option>
                           </select>
+                        </td>
+                        <td className='px-6 py-4 text-sm text-gray-700'>
+                          <button onClick={async ()=>{
+                            if (!confirm('Delete this order? This will remove the order if it belongs only to you.')) return
+                            try {
+                              await axios.delete(`${apiUrl}/api/orders/seller/${order.id}`, { headers: { Authorization: `Bearer ${token}` } })
+                              toast.success('Order deleted')
+                              fetchSellerOrders()
+                            } catch (err) {
+                              console.error('deleteOrder', err)
+                              toast.error(err.response?.data?.message || 'Failed to delete order')
+                            }
+                          }} className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded'>Delete</button>
                         </td>
                       </tr>
                     ))}
@@ -676,6 +701,13 @@ const SellerDashboard = () => {
           <div className='bg-white rounded-lg shadow-lg p-6'>
             <h2 className='text-2xl font-bold mb-4'>Messages</h2>
             <SellerChat />
+          </div>
+        )}
+
+        {selectedTab === 'admin' && (
+          <div className='bg-white rounded-lg shadow-lg p-6'>
+            <h2 className='text-2xl font-bold mb-4'>Admin</h2>
+            <SellerAdmin />
           </div>
         )}
 

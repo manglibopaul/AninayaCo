@@ -81,7 +81,14 @@ const Cart = () => {
       <div className='flex justify-end my-20'>
         <div className='w-full sm:w-[450px]'>
           <CartTotal/>
-          <div className='w-full text-end'>
+          <div className='w-full text-end space-x-3'>
+            <button onClick={() => {
+              const token = localStorage.getItem('token')
+              if (!token) return navigate('/login')
+              navigate('/orders')
+            }} className='bg-gray-200 text-gray-800 text-sm px-6 py-3 mt-4 rounded'>
+              View Orders
+            </button>
             <button onClick={()=>navigate('/place-order')} className='bg-black text-white text-sm px-8 py-3 mt-4'>PROCEED TO CHECKOUT</button>
           </div>
         </div>

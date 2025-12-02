@@ -1,0 +1,57 @@
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+const SellerOrders = () => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const token = localStorage.getItem('token');
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${apiUrl}/api/orders/seller/my-orders`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' },
+      });
+      setOrders(res.data || []);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load seller orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  return (
+    <div className='my-6'>
+      <h2 className='text-2xl font-semibold mb-4'>Seller — Orders</h2>
+      {loading && <p>Loading orders…</p>}
+      {error && <p className='text-red-600'>{error}</p>}
+      {!loading && orders.length === 0 && <p>No orders for your products yet.</p>}
+      {orders.length > 0 && (
+        <div className='space-y-4'>
+          {orders.map(o => (
+            <div key={o.id} className='p-4 border rounded'>
+              <div className='flex justify-between'>
+                <div>
+                  <div className='font-semibold'>Order #{o.id}</div>
+                  <div className='text-sm text-gray-600'>Buyer: {o.firstName} {o.lastName} ({o.email})</div>
+                </div>
+                <div className='text-right'>
+                  <div>₱{o.total}</div>
+                  <div className='text-sm'>{o.orderStatus}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SellerOrders;

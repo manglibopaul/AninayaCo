@@ -5,7 +5,10 @@ import {
   getUserProfile,
   updateUserProfile,
   getAllUsers,
+  deleteUser,
+  updateUserByAdmin,
 } from '../controllers/userController.js';
+import { verifyUser, verifyAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -13,11 +16,13 @@ const router = express.Router();
 router.post('/register', register);
 router.post('/login', login);
 
-// Protected routes (would need auth middleware)
-router.get('/profile', getUserProfile);
-router.put('/profile', updateUserProfile);
+// Protected routes (auth required)
+router.get('/profile', verifyUser, getUserProfile);
+router.put('/profile', verifyUser, updateUserProfile);
 
 // Admin routes
-router.get('/', getAllUsers);
+router.get('/', verifyAdmin, getAllUsers);
+router.delete('/:id', verifyAdmin, deleteUser);
+router.put('/:id', verifyAdmin, updateUserByAdmin);
 
 export default router;

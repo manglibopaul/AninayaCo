@@ -11,6 +11,7 @@ const Product = () => {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   const [productData,setProductData] = useState(false);
   const [image,setImage] = useState('')
+  const [quantity, setQuantity] = useState(1)
   const [showAR, setShowAR] = useState(false);
   const modelViewerRef = useRef(null);
 
@@ -118,11 +119,21 @@ const Product = () => {
               </button>
             )}
 
-            <button 
-              onClick={()=>addToCart(productData._id || productData.id)} 
-              className='bg-black text-white px-8 py-3 text-sm active:bg-pink-700'>
-              ADD TO CART
-            </button>
+            <div className='flex items-center gap-2'>
+              <input
+                type='number'
+                min={1}
+                value={quantity}
+                onChange={(e) => setQuantity(Number(e.target.value) || 1)}
+                className='w-20 px-3 py-2 border rounded'
+                aria-label='Quantity'
+              />
+              <button 
+                onClick={()=>addToCart(productData._id || productData.id, quantity)} 
+                className='bg-black text-white px-6 py-3 text-sm active:bg-pink-700'>
+                ADD TO CART
+              </button>
+            </div>
 
           </div>
 

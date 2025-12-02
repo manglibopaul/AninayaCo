@@ -15,14 +15,15 @@ const ShopContextProvider = (props) => {
   const navigate = useNavigate();
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
   
-  const addToCart = async (itemId) => {
+  // Add item to cart with optional quantity (default 1)
+  const addToCart = async (itemId, qty = 1) => {
 
     let cartData = structuredClone(cartsItems);
 
     if (cartData[itemId]) {
-      cartData[itemId] += 1;
+      cartData[itemId] += Number(qty || 0);
     } else {
-      cartData[itemId] = 1;
+      cartData[itemId] = Number(qty || 0) || 1;
     }
     setCartItems(cartData);
     toast.success('Item added to cart!');

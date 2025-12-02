@@ -13,6 +13,7 @@ const Home = () => {
       <BestSeller/>
       <OurPolicy/>
       <NewsletterBox/>
+      {/* Full-page chat removed; floating ChatWidget remains mounted in App.jsx */}
     </div>
   )
 }

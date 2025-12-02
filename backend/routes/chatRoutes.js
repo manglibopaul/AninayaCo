@@ -8,6 +8,7 @@ import {
   getUserConversations,
   getConversationMessagesForUser,
   userSendMessage,
+  getRecentMessagesDev,
 } from '../controllers/chatController.js'
 
 const router = express.Router()
@@ -21,5 +22,11 @@ router.post('/seller/:userId/message', verifySeller, sellerSendMessage)
 router.get('/user/conversations', verifyUserOptional, getUserConversations)
 router.get('/user/conversation/:sellerId', verifyUserOptional, getConversationMessagesForUser)
 router.post('/user/:sellerId/message', verifyUserOptional, userSendMessage)
+
+// DEV-only: recent chat messages (for debugging) - NOT for production
+router.get('/dev/messages', (req, res) => {
+  if (process.env.NODE_ENV === 'production') return res.status(403).json({ message: 'Not allowed in production' })
+  return getRecentMessagesDev(req, res)
+})
 
 export default router
